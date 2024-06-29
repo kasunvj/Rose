@@ -23,6 +23,9 @@ function splitAndTrim(input) {
 function getRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+function isNotEmpty(data) {
+  return data && Array.isArray(data) && data.length > 0;
+}
 
 var userWordsArr = [];
 var userMeaningArr = [];
@@ -30,7 +33,8 @@ const attributesInit = {
   'vocab':{'words':[],
            'meanings':[],
            'lastCheckWord':'',
-           'lastCheckMeaning':''}
+           'lastCheckMeaning':'',
+           'points':0}
 }
 
 main(token)
@@ -89,6 +93,8 @@ async function main(token){
               else{
                 console.log("No data found");
               }
+
+              bot.sendMessage(chatId,"New word added ✨");
               
             }
             else{
@@ -102,7 +108,7 @@ async function main(token){
             userMeaningArr = (await db.get(chatId)).vocab.meanings;
 
             var exietingData = await db.get(chatId);
-            var randmN = getRandomNumber(0,userMeaningArr.length);
+            var randmN = getRandomNumber(0,userMeaningArr.length-1);
 
             if(exietingData){
               exietingData.vocab.lastCheckWord = userWordsArr[randmN];
@@ -119,27 +125,50 @@ async function main(token){
           
           case 'check':
             var exietingData = await db.get(chatId);
+            var points = exietingData.vocab.points;
             if(exietingData){
               if(textarray[1] == exietingData.vocab.lastCheckWord){
-                bot.sendMessage(chatId, "Correct");
+                points += 1;
+                bot.sendMessage(chatId, `✅ Correct ${points}`);
               }
               else{
-                bot.sendMessage(chatId,"Wrong");
+                points -= 1;
+                bot.sendMessage(chatId,`❎ Wrong ${points}`);
               }
+              var exietingData = await db.get(chatId);
+              if(exietingData){
+                exietingData.vocab.points = points;
+                await db.put(chatId,exietingData)
+              }
+              
             }
             break;
 
           case 'show':
             var exietingData = await db.get(chatId);
-            if(exietingData){
-              bot.sendMessage(chatId, exietingData.vocab.words.toString());
-              
+            try{
+              if(exietingData){
+                isNotEmpty(exietingData.vocab.words) ? bot.sendMessage(chatId, exietingData.vocab.words.toString()) : bot.sendMessage(chatId, "Database is empty");
+              }
             }
+            catch
+              {
+                bot.sendMessage(chatId, "Could not load the database");
+              }
+            
             break;
           
+          case 'points':
+            var exietingData = await db.get(chatId);
+            bot.sendMessage(chatId, `Your Points ${exietingData.vocab.points} 🔥`);
+            break;
+
+
           default:
             bot.sendMessage(chatId, "Wrong Command");
             
+          
+          
 
 
         }
